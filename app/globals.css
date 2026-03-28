@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure code/monospace uses a good font for TABs */
+code, pre, .font-mono {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
