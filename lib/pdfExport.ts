@@ -2,18 +2,21 @@ import { GuitarTab } from '@/types';
 
 export async function exportToPdf(tab: GuitarTab): Promise<void> {
   // Dynamically import jspdf (browser only)
-  const { jsPDF } = await import('jspdf');
+  const jspdf = await import('jspdf');
+  // Support both default export (v1) and named export (v2+/v4)
+  const JsPDF =
+    (jspdf as { jsPDF?: typeof import('jspdf').jsPDF }).jsPDF ??
+    (jspdf as unknown as { default: typeof import('jspdf').jsPDF }).default;
 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const doc = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
-  const contentWidth = pageWidth - margin * 2;
 
   // Title
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
-  doc.text(`${tab.title}`, pageWidth / 2, 20, { align: 'center' });
+  doc.text(tab.title, pageWidth / 2, 20, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(12);
@@ -35,11 +38,11 @@ export async function exportToPdf(tab: GuitarTab): Promise<void> {
       doc.addPage();
       y = 20;
     }
-    doc.text(line, margin, y);
+    doc.text(line || ' ', margin, y);
     y += lineHeight;
   }
 
-  // Footer
+  // Footer on every page
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(8);
   const pageCount = doc.getNumberOfPages();
@@ -53,14 +56,30 @@ export async function exportToPdf(tab: GuitarTab): Promise<void> {
     );
   }
 
-  doc.save(`${tab.artist}-${tab.title}-tab.pdf`.replace(/\s+/g, '_'));
+  const fileName = `${tab.artist}-${tab.title}-tab.pdf`.replace(/\s+/g, '_').replace(/[^
+w\-_.]/g, '');
+  doc.save(fileName);
 }
 
-export function copyAsciiToClipboard(tab: GuitarTab): void {
+export async function copyAsciiToClipboard(tab: GuitarTab): Promise<void> {
   const text = [
     `${tab.title} — ${tab.artist}`,
     '',
     ...tab.asciiLines,
   ].join('\n');
-  navigator.clipboard.writeText(text);
+
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+  } else {
+    // Fallback for non-HTTPS environments
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+  }
 }
