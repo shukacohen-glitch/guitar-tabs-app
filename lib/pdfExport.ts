@@ -3,7 +3,7 @@ import { GuitarTab } from '@/types';
 export async function exportToPdf(tab: GuitarTab): Promise<void> {
   // Dynamically import jspdf (browser only)
   const jspdf = await import('jspdf');
-  // Support both default export (v1) and named export (v2+/v4)
+  // Support both named export (v2+/v4) and default export (v1)
   const JsPDF =
     (jspdf as { jsPDF?: typeof import('jspdf').jsPDF }).jsPDF ??
     (jspdf as unknown as { default: typeof import('jspdf').jsPDF }).default;
@@ -56,8 +56,11 @@ export async function exportToPdf(tab: GuitarTab): Promise<void> {
     );
   }
 
-  const fileName = `${tab.artist}-${tab.title}-tab.pdf`.replace(/\s+/g, '_').replace(/[^
-w\-_.]/g, '');
+  // Build a safe filename
+  const fileName = `${tab.artist}-${tab.title}-tab.pdf`
+    .replace(/\s+/g, '_')
+    .replace(/[^
+\w\-_.]/g, '');
   doc.save(fileName);
 }
 
