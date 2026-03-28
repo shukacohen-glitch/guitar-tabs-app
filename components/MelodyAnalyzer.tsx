@@ -25,7 +25,7 @@ export default function MelodyAnalyzer({
   const [autoGenerating, setAutoGenerating] = useState(false);
   const detectorRef = useRef<import('@/lib/pitchDetection').PitchDetector | null>(null);
   const samplesRef = useRef<PitchSample[]>([]);
-  const ANALYSIS_DURATION_MS = 30_000;
+  const ANALYSIS_DURATION_MS = 60_000; // 60 seconds (1 minute)
 
   const startListening = useCallback(async () => {
     samplesRef.current = [];
@@ -50,6 +50,7 @@ export default function MelodyAnalyzer({
 
       await detector.start();
 
+      // Auto-stop after ANALYSIS_DURATION_MS
       const startTime = Date.now();
       const tick = setInterval(() => {
         const elapsed = Date.now() - startTime;
@@ -80,74 +81,80 @@ export default function MelodyAnalyzer({
     onAnalysisComplete(samplesRef.current);
   }, [onAnalysisComplete]);
 
-  const handleAutoTab = useCallback(() => {
+  const handleAutoTab = useCallback(async () => {
     setAutoGenerating(true);
     setMode('auto');
-    setTimeout(() => {
-      setAutoGenerating(false);
+    try {
+      await new Promise((r) => setTimeout(r, 400));
       onAutoTab();
-    }, 800);
+    } finally {
+      setAutoGenerating(false);
+    }
   }, [onAutoTab]);
 
+  // ── Choose mode ──
   if (mode === 'choose') {
     return (
-      <div className="w-full space-y-3">
+      <div className="w-full space-y-4">
         <div className="bg-gray-800 border border-guitar-brown rounded-lg p-4 text-sm text-gray-300">
-          <p className="font-semibold text-guitar-gold mb-2">🎵 בחר סוג ניתוח</p>
-          <p className="text-xs text-gray-400">כיצד תרצה לקבל את הטאב?</p>
+          <p className="font-semibold text-guitar-gold mb-2">🎵 בחר שיטת יצירת טאב</p>
+          <p>בחר כיצד ברצונך ליצור את הטאב לגיטרה:</p>
         </div>
 
-        <button
-          onClick={() => { setMode('mic'); startListening(); }}
-          className="w-full bg-guitar-brown hover:bg-amber-800 text-white font-bold
-                     py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
-        >
-          🎤 ניתוח מהמיקרופון
-          <span className="text-xs font-normal opacity-75">(האזנה לשיר דרך מיק)</span>
-        </button>
+        <div className="grid grid-cols-1 gap-3">
+          {/* Mic analysis */}
+          <button
+            onClick={() => setMode('mic')}
+            className="w-full bg-guitar-brown hover:bg-amber-800 text-white font-bold
+                       py-4 px-6 rounded-lg transition-colors text-right"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🎤</span>
+              <div>
+                <div className="font-bold">ניתוח מיקרופון</div>
+                <div className="text-xs text-amber-200 font-normal mt-0.5">
+                  הפעל YouTube ואנחנו נקשיב דרך המיקרופון (עד דקה)
+                </div>
+              </div>
+            </div>
+          </button>
 
-        <button
-          onClick={handleAutoTab}
-          className="w-full bg-indigo-700 hover:bg-indigo-600 text-white font-bold
-                     py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
-        >
-          🤖 ניתוח אוטומטי
-          <span className="text-xs font-normal opacity-75">(האפליקציה מייצרת לפי שם השיר)</span>
-        </button>
+          {/* Auto-generate */}
+          <button
+            onClick={handleAutoTab}
+            disabled={autoGenerating}
+            className="w-full bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50
+                       text-white font-bold py-4 px-6 rounded-lg transition-colors text-right"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">✨</span>
+              <div>
+                <div className="font-bold">
+                  {autoGenerating ? 'מייצר טאב...' : 'טאב אוטומטי'}
+                </div>
+                <div className="text-xs text-indigo-200 font-normal mt-0.5">
+                  יצירת טאב מוסיקלי לפי שם האמן והשיר — ללא מיקרופון
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
       </div>
     );
   }
 
-  if (mode === 'auto') {
-    return (
-      <div className="w-full space-y-3">
-        <div className="bg-indigo-900 border border-indigo-600 rounded-lg p-4 text-sm text-indigo-200 text-center">
-          {autoGenerating ? (
-            <>
-              <p className="font-semibold text-lg mb-1">🤖 מייצר טאב אוטומטי...</p>
-              <p className="text-xs opacity-75">מנתח: {artist} — {song}</p>
-            </>
-          ) : (
-            <p className="font-semibold">✅ הטאב נוצר בהצלחה!</p>
-          )}
-        </div>
-        <button
-          onClick={() => setMode('choose')}
-          className="w-full border border-gray-600 text-gray-400 hover:text-white
-                     py-2 px-4 rounded-lg text-sm transition-colors"
-        >
-          ← חזור לבחירה
-        </button>
-      </div>
-    );
-  }
-
+  // ── Mic mode ──
   return (
     <div className="w-full space-y-4">
       <div className="bg-gray-800 border border-guitar-brown rounded-lg p-4 text-sm text-gray-300">
-        <p className="font-semibold text-guitar-gold mb-1">🎙️ ניתוח מלודיה ממיקרופון</p>
-        <p>הפעל את הוידאו ב-YouTube, האפליקציה מקשיבה דרך המיקרופון.</p>
-        <p className="mt-1 text-xs text-gray-400">הניתוח נמשך עד 30 שניות. ניתן לעצור מוקדם.</p>
+        <p className="font-semibold text-guitar-gold mb-1">🎙️ ניתוח מלודיה</p>
+        <p>
+          לחץ על &quot;נתח מלודיה&quot;, הפעל את הוידאו ב-YouTube, והאפליקציה תקשיב דרך
+          המיקרופון לזיהוי התווים.
+        </p>
+        <p className="mt-1 text-xs text-gray-400">
+          הניתוח נמשך עד דקה שלמה (60 שניות). ניתן לעצור מוקדם.
+        </p>
       </div>
 
       {isListening && (
@@ -171,7 +178,7 @@ export default function MelodyAnalyzer({
           className="w-full bg-guitar-brown hover:bg-amber-800 text-white font-bold
                      py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
         >
-          🎤 התחל האזנה (30 שנ&#x27;)
+          🎤 נתח מלודיה (60 שנ&#x27;)
         </button>
       ) : (
         <button
@@ -185,10 +192,9 @@ export default function MelodyAnalyzer({
 
       <button
         onClick={() => { detectorRef.current?.stop(); setMode('choose'); }}
-        className="w-full border border-gray-600 text-gray-400 hover:text-white
-                   py-2 px-4 rounded-lg text-sm transition-colors"
+        className="w-full text-gray-400 hover:text-white text-sm underline py-1"
       >
-        ← חזור לבחירה
+        ← חזור לבחירת שיטה
       </button>
     </div>
   );
