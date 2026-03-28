@@ -66,7 +66,6 @@ export default function HomePage() {
   const handleAnalysisComplete = useCallback(
     (samples: PitchSample[]) => {
       if (samples.length === 0) {
-        // Fall back to demo if nothing was captured
         const demoTab = generateDemoTab(song, artist);
         setTab(demoTab);
       } else {
@@ -85,7 +84,6 @@ export default function HomePage() {
   const handleAnalysisError = useCallback(
     (message: string) => {
       setError(message);
-      // Still offer demo tab on error
       const demoTab = generateDemoTab(song, artist);
       setTab(demoTab);
       setPhase('tab');
@@ -108,7 +106,8 @@ export default function HomePage() {
       {/* Header */}
       <header className="text-center mb-10">
         <h1 className="text-4xl font-bold text-guitar-gold mb-1">🎸 Guitar Tabs App</h1>
-        <p className="text-gray-400 text-sm">
+        <p className="text-guitar-brown text-xs mt-1">By Shuki Cohen</p>
+        <p className="text-gray-400 text-sm mt-2">
           חפש שיר ב-YouTube, נגן, האזן דרך מיקרופון וקבל טאב לגיטרה קלאסית
         </p>
       </header>
@@ -165,7 +164,7 @@ export default function HomePage() {
               <h2 className="text-guitar-gold font-semibold">תוצאות חיפוש:</h2>
               <ul className="space-y-2">
                 {videos.map((v) => (
-                  <li key={v.id}>
+                  <li key={v.id}> 
                     <button
                       onClick={() => handleSelectVideo(v)}
                       className="w-full flex gap-3 items-center bg-gray-800 hover:bg-gray-700
