@@ -6,8 +6,8 @@ import YouTubePlayer from '@/components/YouTubePlayer';
 import MelodyAnalyzer from '@/components/MelodyAnalyzer';
 import TabDisplay from '@/components/TabDisplay';
 import ExportButtons from '@/components/ExportButtons';
-import { searchYouTube } from '@/lib/youtubeSearch';
 import { generateDemoTab, pitchSamplesToTab } from '@/lib/tabGenerator';
+import { generateAutoTab } from '@/lib/autoTabGenerator';
 import { mergeConsecutiveNotes } from '@/lib/pitchDetection';
 import { YouTubeVideo, GuitarTab, AppPhase, PitchSample } from '@/types';
 
@@ -60,6 +60,12 @@ export default function HomePage() {
   const handleUseDemoTab = useCallback(() => {
     const demoTab = generateDemoTab(song || 'Demo Song', artist || 'Demo Artist');
     setTab(demoTab);
+    setPhase('tab');
+  }, [song, artist]);
+
+  const handleAutoTab = useCallback(() => {
+    const autoTab = generateAutoTab(artist || 'Demo Artist', song || 'Demo Song');
+    setTab(autoTab);
     setPhase('tab');
   }, [song, artist]);
 
@@ -133,7 +139,6 @@ export default function HomePage() {
         <section className="max-w-xl mx-auto space-y-8">
           <SearchForm onSearch={handleSearch} loading={loading} />
 
-          {/* No API key notice */}
           {noApiKey && (
             <div
               className="bg-yellow-900 border border-yellow-600 rounded-lg p-4 text-sm
@@ -158,13 +163,12 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Search results */}
           {videos.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-guitar-gold font-semibold">תוצאות חיפוש:</h2>
               <ul className="space-y-2">
                 {videos.map((v) => (
-                  <li key={v.id}> 
+                  <li key={v.id}>
                     <button
                       onClick={() => handleSelectVideo(v)}
                       className="w-full flex gap-3 items-center bg-gray-800 hover:bg-gray-700
@@ -209,8 +213,11 @@ export default function HomePage() {
 
           <div className="flex flex-col gap-3">
             <MelodyAnalyzer
+              artist={artist}
+              song={song}
               onAnalysisComplete={handleAnalysisComplete}
               onAnalysisError={handleAnalysisError}
+              onAutoTab={handleAutoTab}
             />
 
             <div className="text-center">
