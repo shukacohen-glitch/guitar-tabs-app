@@ -10,7 +10,7 @@ function midiToNoteName(midi: number): string {
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   const rounded = Math.round(midi);
   const octave = Math.floor(rounded / 12) - 1;
-  const semitone = rounded % 12;
+  const semitone = ((rounded % 12) + 12) % 12;
   return `${NOTE_NAMES[semitone]}${octave}`;
 }
 
@@ -21,8 +21,8 @@ export interface PitchDetector {
   onError?: (error: Error) => void;
 }
 
-// Minimum clarity threshold to accept a detected pitch
-const CLARITY_THRESHOLD = 0.85;
+// Lowered clarity threshold to capture more notes
+const CLARITY_THRESHOLD = 0.6;
 // Minimum frequency (guitar low E is ~82 Hz)
 const MIN_FREQ = 70;
 // Maximum frequency (guitar high e fret 20 is ~1047 Hz)
@@ -46,7 +46,7 @@ export function createPitchDetector(): PitchDetector {
       audioContext = new AudioContext();
       const source = audioContext.createMediaStreamSource(stream);
       analyser = audioContext.createAnalyser();
-      analyser.fftSize = 2048;
+      analyser.fftSize = 4096;
       source.connect(analyser);
 
       const bufferLength = analyser.fftSize;
@@ -56,6 +56,11 @@ export function createPitchDetector(): PitchDetector {
       intervalId = setInterval(() => {
         if (!analyser || !audioContext) return;
         analyser.getFloatTimeDomainData(floatData);
+
+        // Check if there is enough signal (not silence)
+        const rms = Math.sqrt(floatData.reduce((sum, v) => sum + v * v, 0) / floatData.length);
+        if (rms < 0.005) return; // skip silence
+
         const [freq, clarity] = pitchDetectorInstance.findPitch(
           floatData,
           audioContext.sampleRate
@@ -101,7 +106,7 @@ export function createPitchDetector(): PitchDetector {
 // Merge consecutive same-note samples to reduce noise
 export function mergeConsecutiveNotes(
   samples: PitchSample[],
-  minDuration = 0.15
+  minDuration = 0.08
 ): Array<{ note: string; duration: number }> {
   const result: Array<{ note: string; duration: number }> = [];
   let i = 0;
