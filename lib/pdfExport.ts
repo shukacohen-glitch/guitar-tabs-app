@@ -1,4 +1,6 @@
 import { GuitarTab } from '@/types';
+import { addHebrewFont } from './hebrewFont';
+import { reverseRtl } from './rtlText';
 
 export async function exportToPdf(tab: GuitarTab): Promise<void> {
   // Dynamically import jspdf (browser only)
@@ -13,20 +15,22 @@ export async function exportToPdf(tab: GuitarTab): Promise<void> {
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
 
-  // Title
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text(tab.title, pageWidth / 2, 20, { align: 'center' });
+  // Register the Hebrew (Alef) font and set it as active
+  await addHebrewFont(doc);
 
-  doc.setFont('helvetica', 'normal');
+  // Title — Hebrew, right-aligned
+  doc.setFontSize(18);
+  doc.text(reverseRtl(tab.title), pageWidth - margin, 20, { align: 'right' });
+
+  // Artist — Hebrew, right-aligned
   doc.setFontSize(12);
-  doc.text(`by ${tab.artist}`, pageWidth / 2, 28, { align: 'center' });
+  doc.text(reverseRtl(`על ידי: ${tab.artist}`), pageWidth - margin, 28, { align: 'right' });
 
   // Separator
   doc.setLineWidth(0.5);
   doc.line(margin, 32, pageWidth - margin, 32);
 
-  // ASCII TAB in monospace
+  // ASCII TAB in monospace (LTR — pure ASCII, do NOT reverse)
   doc.setFont('courier', 'normal');
   doc.setFontSize(10);
 
@@ -42,25 +46,25 @@ export async function exportToPdf(tab: GuitarTab): Promise<void> {
     y += lineHeight;
   }
 
-  // Footer on every page
-  doc.setFont('helvetica', 'italic');
+  // Footer on every page — switch back to Alef for Hebrew text, right-aligned
+  doc.setFont('Alef', 'normal');
   doc.setFontSize(8);
   const pageCount = doc.getNumberOfPages();
   for (let p = 1; p <= pageCount; p++) {
     doc.setPage(p);
+    const footerText = `${tab.artist} — ${tab.title} — Guitar Tabs App`;
     doc.text(
-      `Guitar Tabs App — ${tab.title} — ${tab.artist}`,
-      pageWidth / 2,
+      reverseRtl(footerText),
+      pageWidth - margin,
       doc.internal.pageSize.getHeight() - 8,
-      { align: 'center' }
+      { align: 'right' }
     );
   }
 
-  // Build a safe filename
+  // Build a safe filename (all on one line — no newline inside the character class)
   const fileName = `${tab.artist}-${tab.title}-tab.pdf`
     .replace(/\s+/g, '_')
-    .replace(/[^
-\w\-_.]/g, '');
+    .replace(/[^\w\-_.]/g, '');
   doc.save(fileName);
 }
 
